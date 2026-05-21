@@ -46,7 +46,7 @@ Add to your project's `.claude/settings.json`:
     "my-claude-skills": {
       "source": {
         "source": "directory",
-        "path": "/Users/yhuang/workspace/my-claude-skills"
+        "path": "/path/to/my-claude-skills"
       }
     }
   }

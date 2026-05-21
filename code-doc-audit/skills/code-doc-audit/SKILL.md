@@ -2,7 +2,7 @@
 name: code-doc-audit
 description: Audit documentation and inline comments against the current code for **concept, design, and implementation accuracy**. Verifies that the behaviors, business rules, file/test inventories, and CLI flags described in markdown and source comments still match what the code does — and surfaces key concepts present in the code but missing from the docs. Use when the user asks for a "thorough code base analysis against documentation", a "doc audit", to "make sure docs align with the code conceptually", or after a feature/refactor that changes behavior. For pure file:line / code-snippet drift, use **doc-sync** instead (this skill explicitly does NOT re-check line numbers). Repeat rounds until a full pass finds no further changes.
 argument-hint: [optional path to scope the audit]
-allowed-tools: Bash(grep:*), Bash(find:*), Bash(wc:*), Bash(ls:*), Bash(jq:*), Bash(go:*), Read, Edit, Write
+allowed-tools: Bash(grep:*), Bash(find:*), Bash(wc:*), Bash(ls:*), Bash(jq:*), Bash(go:*), Bash(npm:*), Bash(pytest:*), Read, Edit, Write
 ---
 
 # Code/Doc Audit (Concepts, Design, Implementation)
@@ -74,9 +74,9 @@ For each markdown paragraph that describes program behavior — caching policy, 
 
 - **Inverted conditions.** "X happens when Y" but the code now does the opposite.
 - **Removed branches.** "For past dates, …" but past-date handling has been folded into a single rule.
-- **Renamed concepts.** Old name (e.g. `MarkAPICall`) cited where the code now uses the new name (`RecordAPICall`).
-- **Stale magnitudes.** "60-second cache lifetime" when the rule is now per-query-type. "20+ constants" when there are 56 — significantly off should be updated.
-- **Obsolete files / markers.** "a `last_api_call` file holds the timestamp" when the marker has been replaced by a sliding-window log.
+- **Renamed concepts.** Old name (e.g. `ProcessItem`) cited where the code now uses the new name (e.g. `HandleItem`).
+- **Stale magnitudes.** "60-second cache lifetime" when the rule is now per-resource. "20+ constants" when there are 56 — significantly off should be updated.
+- **Obsolete files / markers.** "a sentinel file holds the state" when the implementation has moved to an in-memory or database-backed approach.
 - **Promises the code no longer keeps.** "Cache is never deleted" when the test cleanup wipes it.
 
 Be skeptical of behavioral examples in docs. Trace at least one execution path through the code for each behavior the docs claim. If the *meaning* has drifted, rewrite the description — even if the line number reference happens to still be correct.
@@ -84,22 +84,23 @@ Be skeptical of behavioral examples in docs. Trace at least one execution path t
 ### Step 5 — Verify CLI / flag documentation
 
 ```bash
-grep -n "BoolVar\|StringVar\|IntVar\|Float64Var" internal/cli/flags.go
+# Go projects — find flag definitions across all packages
+grep -rn "BoolVar\|StringVar\|IntVar\|Float64Var" --include="*.go" . 2>/dev/null
 ```
 
 For each flag, confirm:
 - README's CLI flag list mentions it (correct name, correct description).
 - Help text on the flag matches the documented description.
-- Any flag with non-trivial output (e.g. `--debug`, `--continuous`, `--true-up`) has a dedicated subsection in README or ARCHITECTURE showing what it does and when to use it.
+- Any flag with non-trivial output (e.g. `--debug`, `--verbose`, `--dry-run`) has a dedicated subsection in README or ARCHITECTURE showing what it does and when to use it.
 - Removed flags are not still listed.
 
 ### Step 6 — Find missing concept coverage
 
 A concept counts as "key" if **at least one** of these is true:
-- It is exported and is a non-trivial behavior contract (e.g. `cacheMaxAge`, `QueryCost`, `RemainingBudget`).
+- It is exported and is a non-trivial behavior contract (e.g. a retry budget, a cache TTL, a quota limit).
 - It changes user-visible behavior (CLI flags, environment variables, output format).
 - It is referenced in another doc but defined nowhere readable.
-- It encodes a business rule that isn't obvious from the type signature (e.g. "past true-up year cache never expires because the totals are immutable").
+- It encodes a business rule that isn't obvious from the type signature (e.g. "records older than X days are treated as immutable and cached indefinitely").
 - It has multiple call sites and a non-obvious invariant.
 
 For each key concept, check if it appears in:
@@ -113,16 +114,16 @@ If the concept is undocumented or only mentioned in passing, **add a section** i
 - **When** it applies (the trigger or branch condition)
 - **Why** it exists (the business rule or design pressure that forced it)
 
-Prefer adding to the doc that already discusses adjacent concepts (e.g. add a new throttle rule to the existing "Rate Limiting" section, not to a fresh section). Don't create new top-level files unless absolutely necessary.
+Prefer adding to the doc that already discusses adjacent concepts (e.g. add a new retry rule to the existing "Error Handling" section, not to a fresh section). Don't create new top-level files unless absolutely necessary.
 
 ### Step 7 — Verify inline source comments
 
 ```bash
 # Find inline comments that describe behavior, magnitudes, or cross-references
-grep -rn "// .*[0-9]\+ lines\|// .*TODO\|// .*FIXME\|// .*\.go" internal/ main.go
+grep -rn "// .*[0-9]\+ lines\|// .*TODO\|// .*FIXME\|// .*\.go" --include="*.go" . 2>/dev/null
 
 # Find package doc comments (// Package foo …) and skim for stale claims
-grep -rn "^// Package " internal/ main.go
+grep -rn "^// Package " --include="*.go" . 2>/dev/null
 ```
 
 Spot-check comments that:
@@ -145,24 +146,26 @@ Edit in priority order, smallest blast radius first:
 | Stale magnitude / count | Update if significantly off; leave if still approximate |
 | Stale inline comment | Update or delete |
 | Missing concept | Add a subsection in the most appropriate doc |
-| Stale CLI flag | Sync README's CLI list with `internal/cli/flags.go` |
+| Stale CLI flag | Sync README's CLI list with the project's flag definitions |
 
 When rewriting a paragraph, preserve the *structure* of the surrounding doc (headings, table format, bullet style) so the diff stays minimal and reviewable.
 
 ### Step 9 — Verify with tests
+
+Run the project's build and test suite to confirm no regressions. For Go projects:
 
 ```bash
 go build ./...
 go test ./...
 ```
 
-The build catches stale exported names referenced in code that I forgot to update. Tests catch behavioral regressions if I accidentally edited code while editing comments.
+For other stacks, substitute the equivalent commands (`npm run build && npm test`, `pytest`, etc.). The build catches stale exported names; tests catch behavioral regressions from any accidental code edits.
 
 ### Step 10 — Repeat
 
 Go back to Step 3. Keep iterating until a full round produces zero changes.
 
-> **Termination**: stop only when a complete pass finds nothing to fix and `go test ./...` is green. A round that fixes items must be followed by a verification round.
+> **Termination**: stop only when a complete pass finds nothing to fix and the project's test suite is green. A round that fixes items must be followed by a verification round.
 
 ### Step 11 — (Optional) hand off to doc-sync
 
@@ -194,11 +197,11 @@ Keep the summary terse — the diff is the proof of work. Do NOT include line-nu
 
 ## Common stale patterns to watch for
 
-- "Throttle" / "marker" terminology when the implementation has moved on (e.g. single-timestamp marker → sliding-window counter).
-- New CLI flags added to `internal/cli/flags.go` without a corresponding entry in README's flag list or a dedicated subsection explaining the output.
+- Domain-specific terminology (e.g. named strategies, modes, or states) that was renamed during a refactor — old names survive in docs long after the code moves on.
+- New CLI flags added in source without a corresponding entry in README's flag list or a dedicated subsection explaining the output and when to use them.
 - `--debug` / log-format samples in docs drifting from what the code actually prints.
-- "MTD/YTD cache for 60 seconds" when the policy is now per-query-type (∞ / 1h / 24h).
-- Test inventory rows for files that were renamed or merged.
+- Documented cache lifetimes or rate-limit magnitudes that changed when a per-resource or per-query-type policy replaced a single global rule.
+- Test inventory rows for files that were renamed, merged, or deleted.
 - "X test file covers Y" claims when Y has moved to a different test file.
 - Package doc comments that list features the package no longer owns.
 
@@ -214,6 +217,6 @@ grep -rn "├──\s*[a-z_.-]*\.go\|^\s*-\s*\`[a-z_-]*\.go\`" docs/ README.md
 # Exported symbols added recently (potential undocumented concepts)
 git log --since="2 weeks ago" -p -- '*.go' | grep -E "^\+func [A-Z]|^\+type [A-Z]|^\+const [A-Z]|^\+var [A-Z]" | sort -u
 
-# CLI flags currently defined
-grep -n "BoolVar\|StringVar\|IntVar" internal/cli/flags.go
+# CLI flags currently defined (Go projects — adjust path to match project layout)
+grep -rn "BoolVar\|StringVar\|IntVar" --include="*.go" .
 ```

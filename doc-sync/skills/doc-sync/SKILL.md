@@ -2,7 +2,7 @@
 name: doc-sync
 description: Verify that all file:line references in markdown documentation point to real code at those exact lines, and that code examples in docs match the current source. Use when the user asks to "review docs against code", "check that line references are accurate", "make sure comments match the code", "verify documentation", or after a refactor that could invalidate line numbers. Also use proactively when inline comments or code examples in docs look stale. Repeat rounds until a full pass finds no further changes.
 argument-hint: [path to docs, default all *.md]
-allowed-tools: Bash(grep:*), Bash(find:*), Bash(wc:*), Read, Edit
+allowed-tools: Bash(grep:*), Bash(find:*), Bash(wc:*), Bash(go:*), Bash(npm:*), Bash(pytest:*), Read, Edit
 ---
 
 # Documentation Sync
@@ -60,11 +60,18 @@ Spot-check any comments that describe counts, behavior, or reference other files
 
 ### Step 6 — Run tests
 
+Run the project's test suite to confirm no regressions from comment/doc edits:
+
 ```bash
+# Go
 go test ./...
+
+# Node / Python / other — substitute the project's test command
+npm test
+pytest
 ```
 
-Confirm no regressions from edits.
+Skip if the project has no test suite or if only markdown files were changed.
 
 ### Step 7 — Repeat
 
@@ -78,7 +85,7 @@ Go back to Step 2. Keep iterating until a complete pass over all references find
 - Code examples go stale when error handling logic is refactored (e.g., condition flipped, new branch added)
 - Struct field references in docs survive after fields are removed or renamed
 - "~N lines" file size claims drift as files grow
-- Comments saying "one per system per metric" after skipping battery queries
+- Inline comments describing behavior that was later refactored (e.g. "skips X" when the code now always processes X)
 
 ## Quick check script
 
