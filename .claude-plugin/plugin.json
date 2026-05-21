@@ -1,0 +1,17 @@
+{
+  "name": "my-claude-skills",
+  "description": "Personal Claude Code skills: doc-sync, code-doc-audit, and ship.",
+  "version": "1.0.0",
+  "author": {
+    "name": "yhuang"
+  },
+  "repository": "https://github.com/yhuang/my-claude-skills",
+  "license": "MIT",
+  "keywords": [
+    "claude-code",
+    "skills",
+    "doc-sync",
+    "code-doc-audit",
+    "ship"
+  ]
+}
