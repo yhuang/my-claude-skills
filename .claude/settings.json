@@ -1,0 +1,16 @@
+{
+  "enabledPlugins": {
+    "doc-sync@my-claude-skills": true,
+    "code-doc-audit@my-claude-skills": true,
+    "ship@my-claude-skills": true
+  },
+  "extraKnownMarketplaces": {
+    "my-claude-skills": {
+      "source": {
+        "source": "github",
+        "repo": "yhuang/my-claude-skills",
+        "ref": "main"
+      }
+    }
+  }
+}
