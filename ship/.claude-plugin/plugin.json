@@ -1,5 +1,5 @@
 {
   "name": "ship",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Commit any staged/unstaged changes, push the current branch, and open a PR summarizing all commits since main."
 }

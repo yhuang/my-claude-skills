@@ -5,26 +5,26 @@
   },
   "metadata": {
     "description": "Personal Claude Code skills: doc-sync, code-doc-audit, ship.",
-    "version": "1.0.0"
+    "version": "1.0.1"
   },
   "plugins": [
     {
       "name": "doc-sync",
       "source": "./doc-sync",
       "description": "Verify documentation line references and code examples against current source code.",
-      "version": "1.0.0"
+      "version": "1.0.1"
     },
     {
       "name": "code-doc-audit",
       "source": "./code-doc-audit",
       "description": "Audit docs and inline comments for concept/design/implementation accuracy. Pairs with doc-sync.",
-      "version": "1.0.0"
+      "version": "1.0.1"
     },
     {
       "name": "ship",
       "source": "./ship",
       "description": "Commit any staged/unstaged changes, push the current branch, and open a PR summarizing all commits since main.",
-      "version": "1.0.0"
+      "version": "1.0.1"
     }
   ]
 }
