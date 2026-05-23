@@ -4,9 +4,9 @@ Personal [Claude Code](https://claude.ai/code) plugin marketplace with three ski
 
 | Skill | Trigger | Purpose |
 |-------|---------|---------|
-| `doc-sync` | `/doc-sync` | Verify every `file:line` reference in markdown docs points to the right code |
-| `code-doc-audit` | `/code-doc-audit` | Audit docs/comments for concept and behavioral accuracy |
-| `ship` | `/ship` | Commit pending changes, push, and open a GitHub PR |
+| `doc-sync` | `/doc-sync` | Verify every `file:line` reference and code example in markdown docs matches current source |
+| `code-doc-audit` | `/code-doc-audit` | Audit docs/comments for concept, design, and implementation accuracy (does not check file:line — pair with `doc-sync` for that) |
+| `ship` | `/ship` | Commit pending changes, push, and open a GitHub PR whose body summarizes all commits since main |
 
 ## Install in a project
 
