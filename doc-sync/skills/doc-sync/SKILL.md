@@ -11,6 +11,25 @@ Ensure every file:line reference in markdown docs points to current code, and ev
 
 ## Procedure
 
+### Step 0 — Detect project stack
+
+```bash
+ls go.mod package.json pyproject.toml Cargo.toml setup.py 2>/dev/null
+# Bash has no single marker file — check for .sh files instead
+find . -maxdepth 2 -name "*.sh" -o -name "*.bash" 2>/dev/null | head -1
+```
+
+Use the result throughout this procedure for extensions, test commands, and comment style:
+
+| Marker file | Source extensions | Test command | Comment prefix |
+|-------------|-------------------|--------------|----------------|
+| `go.mod` | `.go` | `go test ./...` | `//` |
+| `package.json` | `.ts`, `.tsx`, `.js`, `.jsx` | `npm test` | `//` |
+| `pyproject.toml` / `setup.py` | `.py` | `pytest` | `#` |
+| `*.sh` / `*.bash` files present | `.sh`, `.bash` | `bats .` | `#` |
+
+If multiple markers exist, apply all relevant extension patterns.
+
 ### Step 1 — Collect all markdown files
 
 ```bash
@@ -27,8 +46,11 @@ Look for these patterns in markdown files:
 - `// file.go:N-M` comments inside fenced code blocks
 
 ```bash
-grep -rn "\`[a-z_/]*.go:[0-9]" docs/ README.md QUICKSTART.md 2>/dev/null
-grep -rn "// .*\.go:[0-9]" docs/ 2>/dev/null
+# File:line references in backticks — matches any source extension
+grep -rn "\`[a-z_./-]*\.[a-z]*:[0-9]" docs/ README.md QUICKSTART.md 2>/dev/null
+
+# Cross-file references embedded in comment lines (// or # style)
+grep -rn "// .*\.[a-z]*:[0-9]\|# .*\.[a-z]*:[0-9]" docs/ 2>/dev/null
 ```
 
 ### Step 3 — Verify each reference
