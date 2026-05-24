@@ -2,11 +2,11 @@
 
 Personal [Claude Code](https://claude.ai/code) plugin marketplace with three skills.
 
-| Skill | Trigger | Purpose |
-|-------|---------|---------|
-| `doc-sync` | `/doc-sync` | Verify every `file:line` reference and code example in markdown docs matches current source |
-| `code-doc-audit` | `/code-doc-audit` | Audit docs/comments for concept, design, and implementation accuracy (does not check file:line — pair with `doc-sync` for that) |
-| `ship` | `/ship` | Commit pending changes, push, and open a GitHub PR whose body summarizes all commits since main |
+| Skill | Trigger | Purpose | Optional argument |
+|-------|---------|---------|-------------------|
+| `doc-sync` | `/doc-sync` | Verify every `file:line` reference and code example in markdown docs matches current source | path to docs (default: all `*.md`) |
+| `code-doc-audit` | `/code-doc-audit` | Audit docs/comments for concept, design, and implementation accuracy (does not check file:line — pair with `doc-sync` for that) | path to scope the audit |
+| `ship` | `/ship` | Commit pending changes, push, and open a GitHub PR whose body summarizes all commits since main | PR title override |
 
 ## Install in a project
 

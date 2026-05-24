@@ -1,7 +1,7 @@
 ---
 name: doc-sync
 description: Verify that all file:line references in markdown documentation point to real code at those exact lines, and that code examples in docs match the current source. Use when the user asks to "review docs against code", "check that line references are accurate", "make sure comments match the code", "verify documentation", or after a refactor that could invalidate line numbers. Also use proactively when inline comments or code examples in docs look stale. Repeat rounds until a full pass finds no further changes.
-argument-hint: [path to docs, default all *.md]
+argument-hint: "[path to docs, default all *.md]"
 allowed-tools: Bash(grep:*), Bash(find:*), Bash(wc:*), Bash(go:*), Bash(npm:*), Bash(pytest:*), Read, Edit
 ---
 

@@ -1,7 +1,7 @@
 ---
 name: code-doc-audit
 description: Audit documentation and inline comments against the current code for **concept, design, and implementation accuracy**. Verifies that the behaviors, business rules, file/test inventories, and CLI flags described in markdown and source comments still match what the code does — and surfaces key concepts present in the code but missing from the docs. Use when the user asks for a "thorough code base analysis against documentation", a "doc audit", to "make sure docs align with the code conceptually", or after a feature/refactor that changes behavior. For pure file:line / code-snippet drift, use **doc-sync** instead (this skill explicitly does NOT re-check line numbers). Repeat rounds until a full pass finds no further changes.
-argument-hint: [optional path to scope the audit]
+argument-hint: "[optional path to scope the audit]"
 allowed-tools: Bash(grep:*), Bash(find:*), Bash(wc:*), Bash(ls:*), Bash(jq:*), Bash(go:*), Bash(npm:*), Bash(pytest:*), Read, Edit, Write
 ---
 

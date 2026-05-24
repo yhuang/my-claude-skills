@@ -1,7 +1,7 @@
 ---
 name: ship
 description: Commit any pending changes, push the current branch, and open a GitHub PR whose body summarizes all commits since main diverged. Use when the user says "ship it", "open a PR", "push and PR", or "/ship".
-argument-hint: [optional PR title override]
+argument-hint: "[optional PR title override]"
 allowed-tools: Bash(git:*), Bash(gh:*)
 ---
 
