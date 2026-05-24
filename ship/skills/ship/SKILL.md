@@ -31,7 +31,7 @@ If `git status` shows staged or unstaged modifications:
 git commit -m "$(cat <<'EOF'
 <message here>
 
-Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+Co-Authored-By: Claude <noreply@anthropic.com>
 EOF
 )"
 ```
@@ -77,6 +77,10 @@ EOF
 ```
 
 After the PR is created, output the PR URL so the user can open it.
+
+## Options
+
+- If the user says "ship as draft" or "open a draft PR", add `--draft` to the `gh pr create` command.
 
 ## Rules
 

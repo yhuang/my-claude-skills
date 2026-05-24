@@ -56,22 +56,35 @@ Before running any audit step, do these in order:
 
    If any source enumerates project-specific drift patterns, treat them as additions to the Category Catalog above. If none exists, continue with just the standard catalog.
 
-2. **Enumerate the categories you will check this run.** Output the list to the user before starting. The list = the standard 12 categories above **plus** anything loaded from memory **minus** anything explicitly out of scope for this run.
+2. **Detect project stack.** Run:
+   ```bash
+   ls go.mod package.json pyproject.toml Cargo.toml setup.py 2>/dev/null
+   ```
+   Use the result to fill in extensions, test patterns, and comment style for Steps 1–9:
+
+   | Marker | Source ext | Test file pattern | Test command | Comment prefix |
+   |--------|-----------|-------------------|-------------|----------------|
+   | `go.mod` | `.go` | `_test.go` suffix | `go test ./...` | `//` |
+   | `package.json` | `.ts`, `.tsx`, `.js`, `.jsx` | `.test.*` / `.spec.*` | `npm test` | `//` |
+   | `pyproject.toml` / `setup.py` | `.py` | `test_*.py` / `*_test.py` | `pytest` | `#` |
+   | `Cargo.toml` | `.rs` | `mod tests` blocks | `cargo test` | `//` |
+
+3. **Enumerate the categories you will check this run.** Output the list to the user before starting. The list = the standard 12 categories above **plus** anything loaded from memory **minus** anything explicitly out of scope for this run.
 
    Example output:
    > "I will check these 14 categories this audit: [standard 1-12] + [project memory: 'coverage table' (already in catalog), 'battery-scope phrasing must specify today's live Day Mode']."
 
-3. **Track per-category status.** As you proceed through Steps 1-9, mark each enumerated category as `clean`, `fixed-N-things`, or `flagged-for-user`. This per-category accounting is what Step 10's termination check uses (not just "issues array empty").
+4. **Track per-category status.** As you proceed through Steps 1-9, mark each enumerated category as `clean`, `fixed-N-things`, or `flagged-for-user`. This per-category accounting is what Step 10's termination check uses (not just "issues array empty").
 
 Skipping Step 0 produces audits that find different drift on every invocation. **Do not skip it** — even if the catalog above seems exhaustive, enumerating it explicitly forces blind spots into the open before you start auditing.
 
 ### Step 1 — Inventory the codebase
 
 ```bash
-# Production source
+# Production source — use extension(s) from Step 0 (example: Go)
 find . -name "*.go" -not -path "*/.git/*" -not -name "*_test.go" | sort
 
-# Test source
+# Test source — use test-file pattern from Step 0 (example: Go)
 find . -name "*_test.go" -not -path "*/.git/*" | sort
 
 # All markdown
@@ -89,7 +102,7 @@ If the user implies "since the last audit", inspect recent commits and `git stat
 - Renamed, deleted, or relocated concepts (a renamed function often leaves its old name in docs).
 - New test files that cover a new behavior the docs don't mention.
 
-Run `git log --since="2 weeks ago" --oneline` and skim recent commits for "fix", "refactor", "replace", "rename", "remove" — those are the high-signal signals for doc drift.
+Run `git log --since="2 weeks ago" --oneline` and skim recent commits for "fix", "refactor", "replace", "rename", "remove" — those are the high-signal signals for doc drift. When filtering by file extension, use the extension(s) detected in Step 0 rather than hardcoding `*.go`.
 
 ### Step 3 — Verify file / test inventories
 
@@ -124,9 +137,20 @@ Be skeptical of behavioral examples in docs. Trace at least one execution path t
 
 ### Step 5 — Verify CLI / flag documentation
 
+Use the grep pattern that matches your stack's argument-parsing library:
+
 ```bash
-# Go projects — find flag definitions across all packages
+# Go (flag / pflag / cobra)
 grep -rn "BoolVar\|StringVar\|IntVar\|Float64Var" --include="*.go" . 2>/dev/null
+
+# Python (argparse / click / typer)
+grep -rn "add_argument\|@click\.\(option\|argument\)\|Annotated\[" --include="*.py" . 2>/dev/null
+
+# TypeScript / Node (commander / yargs / meow)
+grep -rn "\.option\|\.argument\|\.command" --include="*.ts" --include="*.js" . 2>/dev/null
+
+# Rust (clap)
+grep -rn "#\[arg\]\|Arg::new\|\.arg(" --include="*.rs" . 2>/dev/null
 ```
 
 For each flag, confirm:
@@ -160,11 +184,18 @@ Prefer adding to the doc that already discusses adjacent concepts (e.g. add a ne
 ### Step 7 — Verify inline source comments
 
 ```bash
-# Find inline comments that describe behavior, magnitudes, or cross-references
-grep -rn "// .*[0-9]\+ lines\|// .*TODO\|// .*FIXME\|// .*\.go" --include="*.go" . 2>/dev/null
+# Inline comments describing behavior, magnitudes, or cross-references
+# Adapt --include and comment prefix (// or #) from Step 0
 
-# Find package doc comments (// Package foo …) and skim for stale claims
-grep -rn "^// Package " --include="*.go" . 2>/dev/null
+# Go / TypeScript / Rust (// comments)
+grep -rn "// .*[0-9]\+ lines\|// .*TODO\|// .*FIXME\|// .*\.[a-z]*:[0-9]" --include="*.go" . 2>/dev/null
+
+# Python (# comments)
+grep -rn "# .*[0-9]\+ lines\|# .*TODO\|# .*FIXME\|# .*\.[a-z]*:[0-9]" --include="*.py" . 2>/dev/null
+
+# Package / module doc comments — skim for stale claims about what the package owns
+grep -rn "^// Package " --include="*.go" . 2>/dev/null        # Go
+grep -rn "^\"\"\"" --include="*.py" . 2>/dev/null | head -20  # Python module docstrings
 ```
 
 Spot-check comments that:
@@ -193,14 +224,16 @@ When rewriting a paragraph, preserve the *structure* of the surrounding doc (hea
 
 ### Step 9 — Verify with tests
 
-Run the project's build and test suite to confirm no regressions. For Go projects:
+Run the project's build and test suite to confirm no regressions. Use the test command from Step 0:
 
 ```bash
-go build ./...
-go test ./...
+go test ./...           # Go (also run: go build ./...)
+npm run build && npm test   # TypeScript / Node
+pytest                  # Python
+cargo test              # Rust
 ```
 
-For other stacks, substitute the equivalent commands (`npm run build && npm test`, `pytest`, etc.). The build catches stale exported names; tests catch behavioral regressions from any accidental code edits.
+The build step (where it exists) catches stale exported names; tests catch behavioral regressions from any accidental code edits.
 
 ### Step 10 — Repeat
 
@@ -282,16 +315,26 @@ These are real-world instances of the categories above — useful for recognizin
 
 ## Quick first-pass commands
 
+Adapt extension filters and patterns to your stack (detected in Step 0). Examples shown for Go.
+
 ```bash
 # Recently modified production code (likely sources of doc drift)
+# Replace '*.go' with your stack's extension; replace grep -v _test.go with your test-file pattern
 git log --since="2 weeks ago" --name-only --pretty=format: -- '*.go' | grep -v _test.go | sort -u | grep -v '^$'
 
-# Inventory-style file mentions in docs
+# Inventory-style file mentions in docs — replace .go with your extension
 grep -rn "├──\s*[a-z_.-]*\.go\|^\s*-\s*\`[a-z_-]*\.go\`" docs/ README.md
 
 # Exported symbols added recently (potential undocumented concepts)
+# Go: uppercase function/type/const/var names
 git log --since="2 weeks ago" -p -- '*.go' | grep -E "^\+func [A-Z]|^\+type [A-Z]|^\+const [A-Z]|^\+var [A-Z]" | sort -u
+# Python: public functions/classes (no leading underscore)
+# git log --since="2 weeks ago" -p -- '*.py' | grep -E "^\+def [a-z]|^\+class [A-Z]" | sort -u
+# TypeScript: exported symbols
+# git log --since="2 weeks ago" -p -- '*.ts' | grep -E "^\+export (function|class|const|type)" | sort -u
 
-# CLI flags currently defined (Go projects — adjust path to match project layout)
-grep -rn "BoolVar\|StringVar\|IntVar" --include="*.go" .
+# CLI flags currently defined — use the pattern for your stack's arg-parsing library
+grep -rn "BoolVar\|StringVar\|IntVar" --include="*.go" .       # Go
+# grep -rn "add_argument\|@click" --include="*.py" .           # Python
+# grep -rn "\.option\|\.argument" --include="*.ts" .           # TypeScript
 ```
