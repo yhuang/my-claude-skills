@@ -15,6 +15,8 @@ Ensure every file:line reference in markdown docs points to current code, and ev
 
 ```bash
 ls go.mod package.json pyproject.toml Cargo.toml setup.py 2>/dev/null
+# Bash has no single marker file — check for .sh files instead
+find . -maxdepth 2 -name "*.sh" -o -name "*.bash" 2>/dev/null | head -1
 ```
 
 Use the result throughout this procedure for extensions, test commands, and comment style:
@@ -24,7 +26,7 @@ Use the result throughout this procedure for extensions, test commands, and comm
 | `go.mod` | `.go` | `go test ./...` | `//` |
 | `package.json` | `.ts`, `.tsx`, `.js`, `.jsx` | `npm test` | `//` |
 | `pyproject.toml` / `setup.py` | `.py` | `pytest` | `#` |
-| `Cargo.toml` | `.rs` | `cargo test` | `//` |
+| `*.sh` / `*.bash` files present | `.sh`, `.bash` | `bats .` | `#` |
 
 If multiple markers exist, apply all relevant extension patterns.
 

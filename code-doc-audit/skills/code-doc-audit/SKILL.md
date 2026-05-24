@@ -59,6 +59,8 @@ Before running any audit step, do these in order:
 2. **Detect project stack.** Run:
    ```bash
    ls go.mod package.json pyproject.toml Cargo.toml setup.py 2>/dev/null
+   # Bash has no single marker file — check for .sh files instead
+   find . -maxdepth 2 -name "*.sh" -o -name "*.bash" 2>/dev/null | head -1
    ```
    Use the result to fill in extensions, test patterns, and comment style for Steps 1–9:
 
@@ -67,7 +69,7 @@ Before running any audit step, do these in order:
    | `go.mod` | `.go` | `_test.go` suffix | `go test ./...` | `//` |
    | `package.json` | `.ts`, `.tsx`, `.js`, `.jsx` | `.test.*` / `.spec.*` | `npm test` | `//` |
    | `pyproject.toml` / `setup.py` | `.py` | `test_*.py` / `*_test.py` | `pytest` | `#` |
-   | `Cargo.toml` | `.rs` | `mod tests` blocks | `cargo test` | `//` |
+   | `*.sh` / `*.bash` files present | `.sh`, `.bash` | `*.bats` (bats-core) | `bats .` | `#` |
 
 3. **Enumerate the categories you will check this run.** Output the list to the user before starting. The list = the standard 12 categories above **plus** anything loaded from memory **minus** anything explicitly out of scope for this run.
 
@@ -149,8 +151,8 @@ grep -rn "add_argument\|@click\.\(option\|argument\)\|Annotated\[" --include="*.
 # TypeScript / Node (commander / yargs / meow)
 grep -rn "\.option\|\.argument\|\.command" --include="*.ts" --include="*.js" . 2>/dev/null
 
-# Rust (clap)
-grep -rn "#\[arg\]\|Arg::new\|\.arg(" --include="*.rs" . 2>/dev/null
+# Bash (getopts / getopt)
+grep -rn "getopts\|getopt\b" --include="*.sh" --include="*.bash" . 2>/dev/null
 ```
 
 For each flag, confirm:
@@ -227,10 +229,10 @@ When rewriting a paragraph, preserve the *structure* of the surrounding doc (hea
 Run the project's build and test suite to confirm no regressions. Use the test command from Step 0:
 
 ```bash
-go test ./...           # Go (also run: go build ./...)
+go test ./...               # Go (also run: go build ./...)
 npm run build && npm test   # TypeScript / Node
-pytest                  # Python
-cargo test              # Rust
+pytest                      # Python
+bats .                      # Bash (bats-core); omit if no *.bats files present
 ```
 
 The build step (where it exists) catches stale exported names; tests catch behavioral regressions from any accidental code edits.
@@ -334,7 +336,8 @@ git log --since="2 weeks ago" -p -- '*.go' | grep -E "^\+func [A-Z]|^\+type [A-Z
 # git log --since="2 weeks ago" -p -- '*.ts' | grep -E "^\+export (function|class|const|type)" | sort -u
 
 # CLI flags currently defined — use the pattern for your stack's arg-parsing library
-grep -rn "BoolVar\|StringVar\|IntVar" --include="*.go" .       # Go
-# grep -rn "add_argument\|@click" --include="*.py" .           # Python
-# grep -rn "\.option\|\.argument" --include="*.ts" .           # TypeScript
+grep -rn "BoolVar\|StringVar\|IntVar" --include="*.go" .             # Go
+# grep -rn "add_argument\|@click" --include="*.py" .                 # Python
+# grep -rn "\.option\|\.argument" --include="*.ts" .                 # TypeScript
+# grep -rn "getopts\|getopt\b" --include="*.sh" --include="*.bash" . # Bash
 ```
